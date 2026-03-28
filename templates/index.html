@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Titanic Survival Predictor</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+<!-- ── Background layers ─────────────────────── -->
+<div class="sky-bg"></div>
+<div class="sun">☀</div>
+
+<div class="clouds" aria-hidden="true">
+  <span class="cloud cloud-1">☁</span>
+  <span class="cloud cloud-2">⛅</span>
+  <span class="cloud cloud-3">☁</span>
+  <span class="cloud cloud-4">☁</span>
+</div>
+
+<div class="wave-wrap" aria-hidden="true">
+  <div class="wave wave-1"></div>
+  <div class="wave wave-2"></div>
+</div>
+
+<!-- ── Page content ──────────────────────────── -->
+<main class="page">
+
+  <!-- Header -->
+  <header class="header">
+    <span class="ship-emoji">🚢</span>
+    <h1>Would You Have<br><em>Survived</em> the Titanic?</h1>
+    <p class="subtitle">KNN · Machine Learning · RMS Titanic · April 15, 1912</p>
+    <div class="divider">
+      <div class="divider-line"></div>
+      <div class="divider-diamond"></div>
+      <div class="divider-line"></div>
+    </div>
+  </header>
+
+  <!-- Main card -->
+  <div class="card">
+
+    <!-- ── Model selection ── -->
+    <div class="section-label">Choose Model</div>
+    <div class="model-selector">
+      <div class="model-opt active" id="opt-knn5" onclick="selectModel('knn5')">
+        <span class="model-name">⚙ KNN  k = 5</span>
+        <span class="model-desc">Fewer neighbours · sharper boundary</span>
+      </div>
+      <div class="model-opt" id="opt-knn7" onclick="selectModel('knn7')">
+        <span class="model-name">⚙ KNN  k = 7</span>
+        <span class="model-desc">More neighbours · smoother boundary</span>
+      </div>
+    </div>
+
+    <!-- ── Personal details ── -->
+    <div class="section-label">Passenger Details</div>
+    <div class="grid">
+
+      <!-- Sex -->
+      <div class="field">
+        <label>Sex</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="btn-female" onclick="setToggle('sex','female','btn-female','btn-male')">♀ Female</button>
+          <button class="toggle-btn"        id="btn-male"   onclick="setToggle('sex','male',  'btn-female','btn-male')">♂ Male</button>
+        </div>
+        <input type="hidden" id="sex" value="female" />
+      </div>
+
+      <!-- Who -->
+      <div class="field">
+        <label>Passenger Type</label>
+        <select id="who">
+          <option value="woman">Woman</option>
+          <option value="man">Man</option>
+          <option value="child">Child</option>
+        </select>
+      </div>
+
+      <!-- Age -->
+      <div class="field">
+        <label>Age — <span class="range-val" id="age-val">28</span> yrs</label>
+        <input type="range" id="age" min="1" max="80" value="28"
+               oninput="document.getElementById('age-val').textContent = this.value" />
+      </div>
+
+    </div>
+
+    <!-- ── Voyage information ── -->
+    <div class="section-label">Voyage Information</div>
+    <div class="grid">
+
+      <!-- Class -->
+      <div class="field">
+        <label>Passenger Class</label>
+        <select id="class" onchange="syncPclass()">
+          <option value="First">First Class</option>
+          <option value="Second">Second Class</option>
+          <option value="Third" selected>Third Class</option>
+        </select>
+        <input type="hidden" id="pclass" value="3" />
+      </div>
+
+      <!-- Fare -->
+      <div class="field">
+        <label>Fare (£) — <span class="range-val" id="fare-val">32</span></label>
+        <input type="range" id="fare" min="0" max="500" value="32"
+               oninput="document.getElementById('fare-val').textContent = this.value" />
+      </div>
+
+      <!-- Embarkation -->
+      <div class="field">
+        <label>Embarkation Port</label>
+        <div class="toggle-group">
+          <button class="toggle-btn"        id="btn-C" onclick="setToggleSingle('embarked','C','btn-C','btn-Q','btn-S')">🇫🇷 Cherbourg</button>
+          <button class="toggle-btn"        id="btn-Q" onclick="setToggleSingle('embarked','Q','btn-C','btn-Q','btn-S')">🇮🇪 Queenstown</button>
+          <button class="toggle-btn active" id="btn-S" onclick="setToggleSingle('embarked','S','btn-C','btn-Q','btn-S')">🇬🇧 Southampton</button>
+        </div>
+        <input type="hidden" id="embarked" value="S" />
+      </div>
+
+    </div>
+
+    <!-- ── Family & status ── -->
+    <div class="section-label">Family &amp; Status</div>
+    <div class="grid">
+
+      <!-- Siblings / Spouses -->
+      <div class="field">
+        <label>Siblings / Spouses — <span class="range-val" id="sibsp-val">0</span></label>
+        <input type="range" id="sibsp" min="0" max="8" value="0"
+               oninput="document.getElementById('sibsp-val').textContent = this.value; updateAlone()" />
+      </div>
+
+      <!-- Parents / Children -->
+      <div class="field">
+        <label>Parents / Children — <span class="range-val" id="parch-val">0</span></label>
+        <input type="range" id="parch" min="0" max="9" value="0"
+               oninput="document.getElementById('parch-val').textContent = this.value; updateAlone()" />
+      </div>
+
+      <!-- Alone -->
+      <div class="field">
+        <label>Travelling Alone</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="btn-alone-y" onclick="setToggle('alone','true', 'btn-alone-y','btn-alone-n')">Yes, Alone</button>
+          <button class="toggle-btn"        id="btn-alone-n" onclick="setToggle('alone','false','btn-alone-y','btn-alone-n')">With Family</button>
+        </div>
+        <input type="hidden" id="alone" value="true" />
+      </div>
+
+      <!-- Adult Male -->
+      <div class="field">
+        <label>Adult Male</label>
+        <div class="toggle-group">
+          <button class="toggle-btn"        id="btn-am-y" onclick="setToggle('adult_male','true', 'btn-am-y','btn-am-n')">Yes</button>
+          <button class="toggle-btn active" id="btn-am-n" onclick="setToggle('adult_male','false','btn-am-y','btn-am-n')">No</button>
+        </div>
+        <input type="hidden" id="adult_male" value="false" />
+      </div>
+
+      <!-- Alive (known historical outcome) -->
+      <div class="field">
+        <label>Known Historical Outcome</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="btn-alive-y" onclick="setToggleSingle('alive','yes','btn-alive-y','btn-alive-n','btn-alive-u')">Survived</button>
+          <button class="toggle-btn"        id="btn-alive-n" onclick="setToggleSingle('alive','no', 'btn-alive-y','btn-alive-n','btn-alive-u')">Perished</button>
+          <button class="toggle-btn"        id="btn-alive-u" onclick="setToggleSingle('alive','yes','btn-alive-y','btn-alive-n','btn-alive-u')" style="flex:.7">Unknown</button>
+        </div>
+        <input type="hidden" id="alive" value="yes" />
+      </div>
+
+    </div>
+
+    <!-- Predict button -->
+    <button class="predict-btn" id="predictBtn" onclick="runPredict()">
+      ⚓ Predict My Fate
+    </button>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <!-- ── Result panel ── -->
+    <div class="result-panel" id="resultPanel">
+
+      <div class="result-header">
+        <span class="result-icon" id="rIcon"></span>
+        <div>
+          <div class="verdict"    id="rVerdict"></div>
+          <div class="verdict-sub" id="rSub"></div>
+        </div>
+      </div>
+
+      <div class="badges" id="rBadges"></div>
+
+      <div class="prob-section">
+        <div class="prob-header">
+          <span>Survival Probability</span>
+          <span id="rProbLabel"></span>
+        </div>
+        <div class="prob-track">
+          <div class="prob-fill" id="rProbFill"></div>
+        </div>
+        <div class="prob-pct" id="rProbPct"></div>
+      </div>
+
+    </div><!-- /result-panel -->
+
+  </div><!-- /card -->
+
+  <!-- Historical note -->
+  <aside class="note">
+    <strong>Historical Context:</strong> On April 15, 1912, the RMS Titanic sank after striking an iceberg in the North Atlantic,
+    claiming over 1,500 lives. The overall survival rate was roughly 32 %. Women, children, and first-class passengers had
+    significantly higher survival rates due to priority boarding of lifeboats. This predictor uses K-Nearest Neighbours models
+    trained on real Titanic passenger records.
+  </aside>
+
+  <footer>RMS Titanic &nbsp;·&nbsp; April 15, 1912 &nbsp;·&nbsp; KNN Classifier</footer>
+
+</main>
+
+<!-- ── JavaScript ──────────────────────────────── -->
+<script>
+  /* ── state ── */
+  let selectedModel = 'knn5';
+
+  /* ── model selector ── */
+  function selectModel(m) {
+    selectedModel = m;
+    document.getElementById('opt-knn5').classList.toggle('active', m === 'knn5');
+    document.getElementById('opt-knn7').classList.toggle('active', m === 'knn7');
+  }
+
+  /* ── 2-option toggle ── */
+  function setToggle(field, val, idA, idB) {
+    document.getElementById(field).value = val;
+    document.getElementById(idA).classList.remove('active');
+    document.getElementById(idB).classList.remove('active');
+    document.getElementById(val === document.getElementById(field).value ? idA : idB);
+    // activate the clicked one
+    const clickedId = (val === 'female' || val === 'true'  || val === 'yes') ? idA : idB;
+    // smarter: compare by value mapping
+    // just activate whichever id is associated with val
+    if (field === 'sex')        { (val==='female' ? document.getElementById(idA) : document.getElementById(idB)).classList.add('active'); }
+    else if (field==='alone')   { (val==='true'   ? document.getElementById(idA) : document.getElementById(idB)).classList.add('active'); }
+    else if (field==='adult_male') { (val==='true'? document.getElementById(idA) : document.getElementById(idB)).classList.add('active'); }
+    else                        { (val==='yes'    ? document.getElementById(idA) : document.getElementById(idB)).classList.add('active'); }
+  }
+
+  /* ── 3-option toggle ── */
+  function setToggleSingle(field, val, ...ids) {
+    document.getElementById(field).value = val;
+    ids.forEach(id => document.getElementById(id).classList.remove('active'));
+    event.currentTarget.classList.add('active');
+  }
+
+  /* ── auto-detect alone ── */
+  function updateAlone() {
+    const sibsp = parseInt(document.getElementById('sibsp').value);
+    const parch = parseInt(document.getElementById('parch').value);
+    const alone = (sibsp === 0 && parch === 0) ? 'true' : 'false';
+    document.getElementById('alone').value = alone;
+    document.getElementById('btn-alone-y').classList.toggle('active',  alone === 'true');
+    document.getElementById('btn-alone-n').classList.toggle('active', alone === 'false');
+  }
+
+  /* ── sync pclass hidden field ── */
+  function syncPclass() {
+    const map = { First: 1, Second: 2, Third: 3 };
+    document.getElementById('pclass').value = map[document.getElementById('class').value];
+  }
+
+  /* ── main predict call ── */
+  async function runPredict() {
+    const btn = document.getElementById('predictBtn');
+    const err = document.getElementById('errorMsg');
+    err.style.display = 'none';
+
+    const payload = {
+      pclass:      document.getElementById('pclass').value,
+      age:         document.getElementById('age').value,
+      sibsp:       document.getElementById('sibsp').value,
+      parch:       document.getElementById('parch').value,
+      fare:        document.getElementById('fare').value,
+      sex:         document.getElementById('sex').value,
+      embarked:    document.getElementById('embarked').value,
+      class:       document.getElementById('class').value,
+      who:         document.getElementById('who').value,
+      adult_male:  document.getElementById('adult_male').value,
+      alive:       document.getElementById('alive').value,
+      alone:       document.getElementById('alone').value,
+      model:       selectedModel,
+    };
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Consulting the sea…';
+
+    try {
+      const resp = await fetch('/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await resp.json();
+
+      if (data.error) throw new Error(data.error);
+
+      showResult(data, payload);
+
+    } catch (e) {
+      err.textContent = '⚠ ' + e.message;
+      err.style.display = 'block';
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '⚓ Predict My Fate';
+  }
+
+  /* ── render result ── */
+  function showResult(r, inputs) {
+    const panel  = document.getElementById('resultPanel');
+    const icon   = document.getElementById('rIcon');
+    const verd   = document.getElementById('rVerdict');
+    const sub    = document.getElementById('rSub');
+    const fill   = document.getElementById('rProbFill');
+    const pct    = document.getElementById('rProbPct');
+    const plabel = document.getElementById('rProbLabel');
+    const badges = document.getElementById('rBadges');
+
+    const pct_val = Math.round(r.survival_prob * 100);
+
+    panel.className  = 'result-panel ' + (r.survived ? 'survived' : 'perished');
+    icon.textContent = r.survived ? '🌊✨' : '⚓💀';
+    verd.textContent = r.survived ? 'You Would Have Survived' : 'You Would Have Perished';
+    sub.textContent  = `${pct_val}% survival probability · ${r.model_used}`;
+
+    plabel.textContent = pct_val + '%';
+    pct.textContent    = pct_val + '%';
+
+    // badges
+    const portMap  = { C:'Cherbourg 🇫🇷', Q:'Queenstown 🇮🇪', S:'Southampton 🇬🇧' };
+    const classMap = { First:'1st Class 🎩', Second:'2nd Class 🎫', Third:'3rd Class 🎒' };
+    const bData = [
+      classMap[inputs.class]  || inputs.class,
+      inputs.sex === 'female' ? '♀ Female' : '♂ Male',
+      `Age ${inputs.age}`,
+      portMap[inputs.embarked] || inputs.embarked,
+      inputs.alone === 'true' ? '🧳 Alone' : '👨‍👩‍👧 With Family',
+      `Model: ${r.model_used}`,
+    ];
+
+    badges.innerHTML = bData.map(b => `<span class="badge">${b}</span>`).join('');
+
+    panel.style.display = 'block';
+    fill.style.width = '0%';
+    setTimeout(() => { fill.style.width = pct_val + '%'; }, 80);
+  }
+</script>
+
+</body>
+</html>
